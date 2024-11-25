@@ -45,7 +45,6 @@ class TokenAPI:
     
     async def verify_token(self, short_token:str, user_id: str = Depends(get_authenticated_user)):
         """Verify a short token."""
-        print(short_token)
         hardware_fingerprint = await verify_jwt_with_fingerprint(short_token)
         return {"message": "Token verified successfully", "hardware_fingerprint": hardware_fingerprint}
 
