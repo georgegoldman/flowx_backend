@@ -1,42 +1,56 @@
-from fastapi import APIRouter, HTTPException, Header
+from fastapi import APIRouter, HTTPException, Header, Depends, status
 from fastapi.security import OAuth2PasswordBearer
 from flowx_backend.schemas.token import TokenData, TokenRequest
-from flowx_backend.services.token import create_token, get_token, get_all_tokens, get_tokens_by_device_sig, delete_token_by_id
+from flowx_backend.services.token import TokenService
 from typing import List
 from flowx_backend.core.jwt import verify_jwt_with_fingerprint
+from flowx_backend.core.dependencies import get_authenticated_user
 
-
-router = APIRouter()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
+class TokenAPI:
+    def __init__(self):
+        self.router = APIRouter()
+        self.service = TokenService("tokens")
+        self.add_routes()
+    
+    def add_routes(self):
+        self.router.post("/token/", response_model=TokenData)(self.create_token)
+        self.router.get("/token/{token_id}", response_model=TokenData)(self.read_token)
+        self.router.get("/token/", response_model=List[TokenData])(self.read_all_tokens)
+        self.router.get("/token/device/{device_sig}", response_model=List[TokenData])(self.get_tokens_by_device_sig)
+        self.router.delete("/tokens/{token_id}")(self.delete_token)
+        self.router.get("/verify-token")(self.verify_token)
 
-# Create user (registration)
-@router.post("/token/", response_model=TokenData)
-async def register_user( request: TokenRequest):
-    user = await create_token(request.device_sig)
-    return user
+    async def create_token(self, request: TokenRequest, user_id: str = Depends(get_authenticated_user)):
+        """Create a new token."""
+        return await self.service.create_token(request.device_sig, request.name)
 
-@router.get("/token/{token_id}", response_model=TokenData)
-async def read_token(token_id: str):
-    token = await get_token(token_id)
-    if not token:
-        raise HTTPException(status_code=404, detail="Token not found")
-    return token
+    async def read_token(self, token_id: str, user_id: str = Depends(get_authenticated_user)):
+        """Get a specific token by ID."""
+        return await self.service.get_token(token_id)
+    
+    async def read_all_tokens(self, user_id: str = Depends(get_authenticated_user)):
+        """Retrieve all tokens."""
+        return await self.service.get_all_tokens()
+    
+    async def get_tokens_by_device_sig(self, device_sig: str, user_id: str = Depends(get_authenticated_user)):
+        """Get tokens by device signature."""
+        return await self.service.get_tokens_by_device_sig(device_sig)
+    
+    async def delete_token(self, token_id: str, user_id: str = Depends(get_authenticated_user)):
+        """Delete a token by ID."""
+        return await self.service.delete_token_by_id(token_id)
+    
+    async def verify_token(self, short_token:str = Header(...), user_id: str = Depends(get_authenticated_user)):
+        """Verify a short token."""
+        hardware_fingerprint = await verify_jwt_with_fingerprint(short_token)
+        return {"message": "Token verified successfully", "hardware_fingerprint": hardware_fingerprint}
 
-@router.get("/token/", response_model=List[TokenData])
-async def read_all_tokens():
-    return await get_all_tokens()
+# Instantiate the API and use its router
+token_api = TokenAPI()
 
-@router.get("/token/device/{device_sig}", response_model=List[TokenData])
-async def get_tokens(device_sig: str):
-    return await get_tokens_by_device_sig(device_sig)
+# Mount the router in the main app
+router = token_api.router
 
-@router.delete("/tokens/{token_id}")
-async def delete_token(token_id: str):
-    return await delete_token_by_id(token_id)
-
-@router.get("/verify-token")
-async def verify_token(short_token: str = Header(...)):
-    hardware_fingerprint = await verify_jwt_with_fingerprint(short_token)
-    return {"message": "Token verified successfully", "hardware_fingerprint": hardware_fingerprint}

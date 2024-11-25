@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 
 class Token(BaseModel):
+    name: str
     main_token: str
     short_token:str
 
@@ -12,3 +13,4 @@ class TokenCreate(Token):
 
 class TokenRequest(BaseModel):
     device_sig: str
+    name: str

@@ -1,9 +1,38 @@
 from datetime import datetime, timedelta
 from jose import jwt #type: ignore
 from flowx_backend.core.config import settings
-from flowx_backend.db.connection import collection
+from flowx_backend.db.connection import get_collection
 from fastapi import HTTPException
+from typing import Optional
+from jose import JWTError
+
 import hashlib
+
+collection  = get_collection("token")
+
+# Create a JWT access token
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    to_encode = data.copy()
+    expire = datetime.now() + (expires_delta or timedelta(days=settings.ACCESS_TOKEN_EXPIRE_DAY))
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+# Verify a JWT token and retrieve the payload
+def verify_access_token(token: str) -> Optional[dict]:
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        return payload
+    except JWTError:
+        return None
+    
+
+    
+
+# Optional: Revoke an access token (useful if you implement token blacklisting)
+def revoke_access_token(token: str) -> bool:
+    # This is a placeholder; revocation would require additional logic
+    # such as a blacklist in your datab ase or an in-memory store.
+    return True  # Always returns True for now; replace with actual revocation logic if needed
 
 def generate_main_jwt(fingerprint:str):
     secret_key = settings.SECRET_KEY

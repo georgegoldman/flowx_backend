@@ -22,13 +22,16 @@ except Exception as e:
     print(e)
 
 async def connect_db():
-    return client
+    try:
+        return client
+    except Exception as e:
+        print(e)
     
 def get_collection(collection_name: str):
     """Get a collection from the MongoDB database."""
     if db == None:
         raise Exception("Database not connected.")
-    return db
+    return db[collection_name]
 
 async def close_db():
     """Close the MongoDB connection."""
