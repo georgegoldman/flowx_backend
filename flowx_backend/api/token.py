@@ -21,7 +21,7 @@ class TokenAPI:
         self.router.get("/token/", response_model=List[TokenData])(self.read_all_tokens)
         self.router.get("/token/device/{device_sig}", response_model=List[TokenData])(self.get_tokens_by_device_sig)
         self.router.delete("/tokens/{token_id}")(self.delete_token)
-        self.router.get("/verify-token")(self.verify_token)
+        self.router.get("/verify-token/{short_token}")(self.verify_token)
 
     async def create_token(self, request: TokenRequest, user_id: str = Depends(get_authenticated_user)):
         """Create a new token."""
@@ -43,8 +43,9 @@ class TokenAPI:
         """Delete a token by ID."""
         return await self.service.delete_token_by_id(token_id)
     
-    async def verify_token(self, short_token:str = Header(...), user_id: str = Depends(get_authenticated_user)):
+    async def verify_token(self, short_token:str, user_id: str = Depends(get_authenticated_user)):
         """Verify a short token."""
+        print(short_token)
         hardware_fingerprint = await verify_jwt_with_fingerprint(short_token)
         return {"message": "Token verified successfully", "hardware_fingerprint": hardware_fingerprint}
 

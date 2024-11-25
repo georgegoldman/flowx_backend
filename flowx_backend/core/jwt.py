@@ -8,7 +8,7 @@ from jose import JWTError
 
 import hashlib
 
-collection  = get_collection("token")
+collection  = get_collection("tokens")
 
 # Create a JWT access token
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
